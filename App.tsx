@@ -4,15 +4,20 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Image } from 'react-native';
+
 
 // Hårdkoda API-nyckeln här, eller använd en miljövariabel via .env-fil
 const API_KEY = '';
+
 
 // Definiera typen för nyhetsartiklar
 type NewsArticle = {
   title: string;
   description: string;
+  urlToImage: string; 
 };
+
 
 // Definiera typen för din stack
 type RootStackParamList = {
@@ -21,12 +26,15 @@ type RootStackParamList = {
   SavedArticles: undefined;
 };
 
+
 // Typa navigation-prop med StackNavigationProp
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>;
+
 
 type HomeScreenProps = {
   navigation: HomeScreenNavigationProp;
 };
+
 
 const HomeScreen = ({ navigation }: HomeScreenProps) => {
   return (
@@ -38,6 +46,7 @@ const HomeScreen = ({ navigation }: HomeScreenProps) => {
   );
 };
 
+
 // Funktion för att spara artikel till AsyncStorage
 const saveArticle = async (article: NewsArticle) => {
   try {
@@ -45,8 +54,10 @@ const saveArticle = async (article: NewsArticle) => {
     const savedArticles = await AsyncStorage.getItem('savedArticles');
     const parsedArticles = savedArticles ? JSON.parse(savedArticles) : [];
 
+
     // Kolla om artikeln redan är sparad
     const isArticleSaved = parsedArticles.some((savedArticle: NewsArticle) => savedArticle.title === article.title);
+
 
     if (!isArticleSaved) {
       // Lägg till artikeln i listan om den inte redan är sparad
@@ -61,9 +72,11 @@ const saveArticle = async (article: NewsArticle) => {
   }
 };
 
+
 const DetailsScreen = () => {
   const [news, setNews] = useState<NewsArticle[]>([]);
   const [loading, setLoading] = useState(false);
+
 
   const fetchNews = async () => {
     setLoading(true);
@@ -78,6 +91,7 @@ const DetailsScreen = () => {
     }
   };
 
+
   if (loading) {
     return (
       <View style={styles.container}>
@@ -85,6 +99,7 @@ const DetailsScreen = () => {
       </View>
     );
   }
+
 
   return (
     <View style={styles.container}>
@@ -95,6 +110,9 @@ const DetailsScreen = () => {
           keyExtractor={(item, index) => index.toString()}
           renderItem={({ item }) => (
             <View style={styles.newsItem}>
+               {item.urlToImage ? (
+                <Image source={{ uri: item.urlToImage }} style={styles.image} />
+              ) : null}
               <Text style={styles.title}>{item.title}</Text>
               <Text style={styles.description}>{item.description}</Text>
               <Button title="Save Article" onPress={() => saveArticle(item)} />
@@ -106,10 +124,12 @@ const DetailsScreen = () => {
   );
 };
 
+
 // Skärm för att visa sparade artiklar
 const SavedArticlesScreen = () => {
   const [savedArticles, setSavedArticles] = useState<NewsArticle[]>([]);
 
+  // Funktion för att hämta sparade artiklar från AsyncStorage
   const getSavedArticles = async () => {
     try {
       const saved = await AsyncStorage.getItem('savedArticles');
@@ -121,6 +141,30 @@ const SavedArticlesScreen = () => {
     }
   };
 
+  // Funktion för att radera en sparad artikel
+  const deleteArticle = async (article: NewsArticle) => {
+    try {
+      // Hämta alla sparade artiklar från AsyncStorage
+      const savedArticles = await AsyncStorage.getItem('savedArticles');
+      const parsedArticles = savedArticles ? JSON.parse(savedArticles) : [];
+
+      // Filtrera bort den artikel som ska raderas
+      const updatedArticles = parsedArticles.filter(
+        (savedArticle: NewsArticle) => savedArticle.title !== article.title
+      );
+
+      // Uppdatera AsyncStorage med den nya listan utan den raderade artikeln
+      await AsyncStorage.setItem('savedArticles', JSON.stringify(updatedArticles));
+
+      // Uppdatera lokalt state så att listan i UI också uppdateras
+      setSavedArticles(updatedArticles);
+      alert('Article deleted!');
+    } catch (error) {
+      console.error('Error deleting article:', error);
+    }
+  };
+
+  // Hämta sparade artiklar när komponenten laddas
   useEffect(() => {
     getSavedArticles();
   }, []);
@@ -136,6 +180,7 @@ const SavedArticlesScreen = () => {
             <View style={styles.newsItem}>
               <Text style={styles.title}>{item.title}</Text>
               <Text style={styles.description}>{item.description}</Text>
+              <Button title="Delete Article" onPress={() => deleteArticle(item)} />
             </View>
           )}
         />
@@ -146,7 +191,9 @@ const SavedArticlesScreen = () => {
   );
 };
 
+
 const Stack = createStackNavigator<RootStackParamList>();
+
 
 const App = () => {
   return (
@@ -159,6 +206,7 @@ const App = () => {
     </NavigationContainer>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {
@@ -184,6 +232,12 @@ const styles = StyleSheet.create({
   description: {
     fontSize: 14,
   },
+  image: {
+    width: '100%',
+    height: 200,
+    marginBottom: 10,
+  },
 });
+
 
 export default App;
