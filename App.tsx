@@ -1,14 +1,12 @@
-import React, { useState, useEffect } from 'react'; 
+import React, { useState, useEffect } from 'react';
 import { Text, View, Button, StyleSheet, FlatList } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-
-
-// Hårdkoda API-nyckeln här
-const API_KEY = 'din_riktiga_api_nyckel';
+// Hårdkoda API-nyckeln här, eller använd en miljövariabel via .env-fil
+const API_KEY = '';
 
 // Definiera typen för nyhetsartiklar
 type NewsArticle = {
@@ -43,11 +41,21 @@ const HomeScreen = ({ navigation }: HomeScreenProps) => {
 // Funktion för att spara artikel till AsyncStorage
 const saveArticle = async (article: NewsArticle) => {
   try {
+    // Hämta redan sparade artiklar från AsyncStorage
     const savedArticles = await AsyncStorage.getItem('savedArticles');
     const parsedArticles = savedArticles ? JSON.parse(savedArticles) : [];
-    const newArticles = [...parsedArticles, article];
-    await AsyncStorage.setItem('savedArticles', JSON.stringify(newArticles));
-    alert('Article saved!');
+
+    // Kolla om artikeln redan är sparad
+    const isArticleSaved = parsedArticles.some((savedArticle: NewsArticle) => savedArticle.title === article.title);
+
+    if (!isArticleSaved) {
+      // Lägg till artikeln i listan om den inte redan är sparad
+      const newArticles = [...parsedArticles, article];
+      await AsyncStorage.setItem('savedArticles', JSON.stringify(newArticles));
+      alert('Article saved!');
+    } else {
+      alert('This article is already saved.');
+    }
   } catch (error) {
     console.error('Error saving article:', error);
   }
@@ -60,7 +68,8 @@ const DetailsScreen = () => {
   const fetchNews = async () => {
     setLoading(true);
     try {
-        const response = await fetch('https://newsapi.org/v2/top-headlines?country=us&apiKey=d7ded560865141efa0fbe50980a33acd');      const data = await response.json();
+      const response = await fetch(`https://newsapi.org/v2/top-headlines?country=us&apiKey=${API_KEY}`);
+      const data = await response.json();
       setNews(data.articles);
     } catch (error) {
       console.error('Error fetching news:', error);
